@@ -1,13 +1,15 @@
 # Jekofit Backend API
 
-A NestJS backend application built with modular monolith architecture for the Jekofit shopping platform. This project handles user onboarding, authentication, and personal information management.
+A NestJS backend application built with modular monolith architecture for the Jekofit fitness platform. This project handles user authentication, profile management, and newsletter preferences.
 
 ## Features
 
 - **Email/Password Authentication**: User registration and login with secure password handling
 - **OAuth2 Integration**: Social login with Google, Facebook, and Apple
-- **User Profile Management**: User profile management including address, phone, etc.
+- **User Profile Management**: User profile management including personal information
 - **Password Reset**: Forgot password and reset password functionality
+- **Email Verification**: Email verification system for user accounts
+- **Newsletter Management**: User newsletter subscription preferences
 - **Security**: JWT authentication, rate limiting, input validation
 - **Modular Architecture**: Clean separation of concerns with NestJS modules
 
@@ -19,6 +21,8 @@ A NestJS backend application built with modular monolith architecture for the Je
 - **Validation**: class-validator, class-transformer
 - **Security**: bcryptjs, rate limiting
 - **OAuth Providers**: Google, Facebook, Apple
+- **API Documentation**: Swagger/OpenAPI
+- **Email**: Nodemailer
 
 ## Project Structure
 
@@ -27,22 +31,61 @@ src/
 ├── main.ts                          # Application entry point
 ├── app.module.ts                    # Root module
 └── modules/
-    └── onboarding/                 # Onboarding module
-        ├── onboarding.module.ts    # Onboarding module definition
-        ├── authentication/         # Authentication submodule
-        │   ├── authentication.module.ts
-        │   ├── controllers/        # Auth controllers
-        │   ├── services/           # Auth services
-        │   ├── strategies/         # Passport strategies
-        │   ├── guards/             # Auth guards
-        │   ├── decorators/        # Custom decorators
-        │   ├── dto/               # Data transfer objects
-        │   └── entities/          # Database entities
-        └── profile/               # Profile submodule
-            ├── profile.module.ts
-            ├── controllers/
-            ├── services/
-            └── dto/
+    ├── auth/                        # Authentication module
+    │   ├── auth.module.ts          # Auth module definition
+    │   ├── controllers/            # Auth controllers
+    │   │   ├── auth.controller.ts
+    │   │   └── oauth.controller.ts
+    │   ├── services/               # Auth services
+    │   │   ├── auth.service.ts
+    │   │   ├── oauth.service.ts
+    │   │   ├── profile.service.ts
+    │   │   └── email.service.ts
+    │   ├── strategies/             # Passport strategies
+    │   │   ├── jwt.strategy.ts
+    │   │   ├── google.strategy.ts
+    │   │   ├── facebook.strategy.ts
+    │   │   └── apple.strategy.ts
+    │   ├── guards/                 # Auth guards
+    │   │   └── jwt-auth.guard.ts
+    │   ├── decorators/            # Custom decorators
+    │   │   ├── current-user.decorator.ts
+    │   │   └── public.decorator.ts
+    │   ├── dto/                   # Data transfer objects
+    │   │   ├── auth-response.dto.ts
+    │   │   ├── login.dto.ts
+    │   │   ├── register.dto.ts
+    │   │   ├── register-personal-info.dto.ts
+    │   │   ├── forgot-password.dto.ts
+    │   │   ├── reset-password.dto.ts
+    │   │   ├── verify-email.dto.ts
+    │   │   ├── send-verification.dto.ts
+    │   │   └── update-profile.dto.ts
+    │   └── entities/              # Database entities
+    │       ├── auth.entity.ts
+    │       ├── email-verification.entity.ts
+    │       ├── oauth-account.entity.ts
+    │       └── password-reset.entity.ts
+    └── user/                       # User module
+        ├── user.module.ts          # User module definition
+        ├── controllers/            # User controllers
+        │   └── user.controller.ts
+        ├── services/               # User services
+        │   └── user.service.ts
+        ├── repositories/           # Data repositories
+        │   ├── auth.repository.ts
+        │   ├── auth.repository.interface.ts
+        │   ├── newsletter-preference.repository.ts
+        │   └── newsletter-preference.repository.interface.ts
+        ├── dto/                   # Data transfer objects
+        │   ├── personal-info.dto.ts
+        │   ├── change-password.dto.ts
+        │   ├── email-verification.dto.ts
+        │   ├── login-details.dto.ts
+        │   ├── newsletter-status.dto.ts
+        │   └── update-newsletter.dto.ts
+        └── entities/              # Database entities
+            └── newsletter-preference.entity.ts
 
 ```
 
@@ -56,8 +99,8 @@ src/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd shopping-web
+   git clone https://github.com/engineOlawale21/jekofit-backend.git
+   cd jekofit-backend
    ```
 
 2. **Install dependencies**
@@ -167,6 +210,19 @@ Content-Type: application/json
 }
 ```
 
+#### Register with Personal Info
+```http
+POST /auth/register/personal-info
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
 #### Login
 ```http
 POST /auth/login
@@ -198,6 +254,35 @@ Authorization: Bearer <access-token>
 ```http
 GET /auth/me
 Authorization: Bearer <access-token>
+```
+
+#### Get User Profile
+```http
+GET /auth/profile
+Authorization: Bearer <access-token>
+```
+
+### Email Verification
+
+#### Send Verification Email
+```http
+POST /auth/send-verification
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+#### Verify Email
+```http
+POST /auth/verify-email
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
 ```
 
 ### Password Reset
@@ -243,47 +328,66 @@ GET /auth/apple
 GET /auth/apple/callback
 ```
 
-### User Profile
+### User Management
 
-#### Create User Profile
+#### Get Personal Info
 ```http
-POST /profile
-Authorization: Bearer <access-token>
-Content-Type: application/json
-
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "phoneNumber": "+1234567890",
-  "address": "123 Main St",
-  "country": "USA",
-  "state": "California",
-  "city": "Los Angeles",
-  "zipCode": "90001"
-}
-```
-
-#### Get User Profile
-```http
-GET /profile
+GET /user/personal-info
 Authorization: Bearer <access-token>
 ```
 
-#### Update User Profile
+#### Update Personal Info
 ```http
-PUT /profile
+PUT /user/personal-info
 Authorization: Bearer <access-token>
 Content-Type: application/json
 
 {
   "firstName": "Jane",
-  "lastName": "Smith"
+  "lastName": "Smith",
+  "phoneNumber": "+1234567890"
 }
 ```
 
-#### Delete User Profile
+#### Get Login Details
 ```http
-DELETE /profile
+GET /user/login-details
+Authorization: Bearer <access-token>
+```
+
+#### Get Email Verification Status
+```http
+GET /user/email-verification
+Authorization: Bearer <access-token>
+```
+
+#### Change Password
+```http
+POST /user/change-password
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{
+  "currentPassword": "OldPass123!",
+  "newPassword": "NewPass123!"
+}
+```
+
+#### Get Newsletter Status
+```http
+GET /user/newsletter-status
+Authorization: Bearer <access-token>
+```
+
+#### Subscribe to Newsletter
+```http
+POST /user/newsletter/subscribe
+Authorization: Bearer <access-token>
+```
+
+#### Unsubscribe from Newsletter
+```http
+POST /user/newsletter/unsubscribe
 Authorization: Bearer <access-token>
 ```
 
@@ -341,10 +445,9 @@ npm run lint
 - `id` (UUID, Primary Key)
 - `email` (VARCHAR, Unique)
 - `password` (VARCHAR)
-- `isEmailVerified` (BOOLEAN)
-- `provider` (ENUM: local, google, facebook, apple)
-- `providerId` (VARCHAR)
-- `refreshToken` (VARCHAR)
+- `isEmailVerified` (BOOLEAN, Default: false)
+- `emailVerifiedAt` (TIMESTAMP, Nullable)
+- `refreshToken` (VARCHAR, Nullable)
 - `firstName` (VARCHAR, Nullable)
 - `lastName` (VARCHAR, Nullable)
 - `phoneNumber` (VARCHAR, Nullable)
@@ -353,18 +456,48 @@ npm run lint
 - `state` (VARCHAR, Nullable)
 - `city` (VARCHAR, Nullable)
 - `zipCode` (VARCHAR, Nullable)
+- `dateOfBirth` (DATE, Nullable)
+- `gender` (VARCHAR, Nullable)
 - `createdAt` (TIMESTAMP)
 - `updatedAt` (TIMESTAMP)
 
-**Note**: Profile fields are integrated into the users table for a normalized structure
+### Email Verifications Table
+- `id` (UUID, Primary Key)
+- `code` (VARCHAR, Unique)
+- `expiresAt` (TIMESTAMP)
+- `isUsed` (BOOLEAN, Default: false)
+- `userId` (UUID, Foreign Key)
+- `createdAt` (TIMESTAMP)
 
 ### Password Resets Table
 - `id` (UUID, Primary Key)
 - `token` (VARCHAR)
 - `expiresAt` (TIMESTAMP)
-- `isUsed` (BOOLEAN)
+- `isUsed` (BOOLEAN, Default: false)
 - `userId` (UUID, Foreign Key)
 - `createdAt` (TIMESTAMP)
+
+### OAuth Accounts Table
+- `id` (UUID, Primary Key)
+- `userId` (UUID, Foreign Key)
+- `provider` (VARCHAR)
+- `providerUserId` (VARCHAR, Indexed)
+- `accessToken` (VARCHAR, Nullable)
+- `refreshToken` (VARCHAR, Nullable)
+- `createdAt` (TIMESTAMP)
+- `updatedAt` (TIMESTAMP)
+
+### Newsletter Preferences Table
+- `id` (UUID, Primary Key)
+- `userId` (UUID, Unique, Foreign Key)
+- `isSubscribed` (BOOLEAN, Default: false)
+- `subscribedAt` (TIMESTAMP, Nullable)
+- `unsubscribedAt` (TIMESTAMP, Nullable)
+- `marketingConsent` (BOOLEAN, Default: false)
+- `consentGivenAt` (TIMESTAMP, Nullable)
+- `consentWithdrawnAt` (TIMESTAMP, Nullable)
+- `createdAt` (TIMESTAMP)
+- `updatedAt` (TIMESTAMP)
 
 ## License
 
