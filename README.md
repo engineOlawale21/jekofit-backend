@@ -1,5 +1,7 @@
 # Jekofit Backend API
 
+The screen-aligned backend roadmap and current capability checklist are maintained in [BACKEND_IMPLEMENTATION_PLAN.md](./BACKEND_IMPLEMENTATION_PLAN.md).
+
 A NestJS backend application built with modular monolith architecture for the Jekofit fitness platform. This project handles user authentication, profile management, and newsletter preferences.
 
 ## Features
@@ -93,6 +95,21 @@ src/
 
 - Node.js (v14 or higher)
 - PostgreSQL (v12 or higher)
+
+## Database migrations and background jobs
+
+Development may use TypeORM synchronization. Production never synchronizes the schema: it runs migrations at startup.
+
+```bash
+# Optional local infrastructure (requires Docker Desktop)
+docker compose up -d postgres redis
+
+# Generate a reviewed migration from entity changes, then apply it
+npm run migration:generate
+npm run migration:run
+```
+
+Redis is required for email, cleanup and production queues. Production jobs are created only after a verified payment transaction commits and are processed asynchronously by Bull.
 - npm or yarn
 
 ## Installation

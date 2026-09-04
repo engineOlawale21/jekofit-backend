@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, MinLength, Matches, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, MinLength, Matches, MaxLength, IsNumber, IsInt, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterPersonalInfoDto {
@@ -101,4 +101,42 @@ export class RegisterPersonalInfoDto {
   @IsString()
   @MaxLength(20)
   zipCode?: string;
+
+  @ApiProperty({
+    example: 'Female',
+    description: 'User gender',
+    maxLength: 50,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  gender?: string;
+
+  @ApiProperty({
+    example: 70.5,
+    description: 'User weight in kg',
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  weight?: number;
+
+  @ApiProperty({
+    example: 175.2,
+    description: 'User height in cm',
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  height?: number;
+
+  @ApiProperty({
+    example: 10000,
+    description: 'User daily active goal',
+    required: false,
+  })
+  @IsInt()
+  @IsOptional()
+  dailyGoal?: number;
 }

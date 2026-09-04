@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, MaxLength, IsDateString } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength, IsDateString, IsNumber, IsInt } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PersonalInfoRequestDto {
@@ -71,6 +71,15 @@ export class PersonalInfoDto {
 
   @ApiProperty({ example: 'Female', required: false })
   gender: string;
+
+  @ApiProperty({ example: 70.5, required: false, description: 'Weight in kg' })
+  weight: number;
+
+  @ApiProperty({ example: 175.2, required: false, description: 'Height in cm' })
+  height: number;
+
+  @ApiProperty({ example: 10000, required: false, description: 'Daily active goal' })
+  dailyGoal: number;
 
   @ApiProperty({
     example: false,
@@ -202,4 +211,19 @@ export class UpdatePersonalInfoDto {
   @IsOptional()
   @MaxLength(50)
   gender?: string;
+
+  @ApiProperty({ example: 70.5, required: false, description: 'Weight in kg' })
+  @IsNumber()
+  @IsOptional()
+  weight?: number;
+
+  @ApiProperty({ example: 175.2, required: false, description: 'Height in cm' })
+  @IsNumber()
+  @IsOptional()
+  height?: number;
+
+  @ApiProperty({ example: 10000, required: false, description: 'Daily active goal' })
+  @IsInt()
+  @IsOptional()
+  dailyGoal?: number;
 }

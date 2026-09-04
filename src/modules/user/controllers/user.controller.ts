@@ -69,14 +69,14 @@ export class UserController {
     return this.userService.getNewsletterStatus(user.id);
   }
 
-  // @Put('newsletter-status')
-  // @HttpCode(HttpStatus.OK)
-  // @ApiOperation({ summary: 'Update newsletter subscription preferences' })
-  // @ApiResponse({ status: 200, description: 'Newsletter preferences updated successfully', type: NewsletterStatusDto })
-  // @ApiResponse({ status: 404, description: 'User not found' })
-  // async updateNewsletter(@CurrentUser() user: Auth, @Body() updateNewsletterDto: UpdateNewsletterDto): Promise<NewsletterStatusDto> {
-  //   return this.userService.updateNewsletter(user.id, updateNewsletterDto);
-  // }
+  @Put('newsletter-status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update newsletter subscription preferences' })
+  @ApiResponse({ status: 200, description: 'Newsletter preferences updated successfully', type: NewsletterStatusDto })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateNewsletter(@CurrentUser() user: Auth, @Body() updateNewsletterDto: UpdateNewsletterDto): Promise<NewsletterStatusDto> {
+    return this.userService.updateNewsletter(user.id, updateNewsletterDto);
+  }
 
   @Post('newsletter/subscribe')
   @HttpCode(HttpStatus.OK)

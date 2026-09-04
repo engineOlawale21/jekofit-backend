@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes, randomInt } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { Auth } from '../entities/auth.entity';
 import { PasswordReset } from '../entities/password-reset.entity';
 import { EmailVerification } from '../entities/email-verification.entity';
@@ -14,6 +16,7 @@ import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { EmailService } from './email.service';
+import { EMAIL_QUEUE, EmailJobName } from '../queues/email.queue';
 
 @Injectable()
 export class AuthService {
@@ -26,6 +29,8 @@ export class AuthService {
     private readonly emailVerificationRepository: Repository<EmailVerification>,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
+    @InjectQueue(EMAIL_QUEUE)
+    private readonly emailQueue: Queue,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<void> {
@@ -58,6 +63,10 @@ export class AuthService {
       state: registerPersonalInfoDto.state,
       city: registerPersonalInfoDto.city,
       zipCode: registerPersonalInfoDto.zipCode,
+      gender: registerPersonalInfoDto.gender,
+      weight: registerPersonalInfoDto.weight,
+      height: registerPersonalInfoDto.height,
+      dailyGoal: registerPersonalInfoDto.dailyGoal,
     });
 
     const savedAuth = await this.authRepository.save(auth);
@@ -85,8 +94,9 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokens(auth);
-    
-    await this.authRepository.update(auth.id, { refreshToken: tokens.refreshToken });
+
+    // Store hashed refresh token — never the raw JWT
+    await this.authRepository.update(auth.id, { refreshToken: this.hashToken(tokens.refreshToken) });
 
     return tokens;
   }
@@ -108,8 +118,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    // Compare against stored hash — never store or compare raw tokens
     const auth = await this.authRepository.findOne({
-      where: { refreshToken },
+      where: { refreshToken: this.hashToken(refreshToken) },
     });
 
     if (!auth) {
@@ -117,8 +128,11 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokens(auth);
-    
-    await this.authRepository.update(auth.id, { refreshToken: tokens.refreshToken });
+
+    // Rotate: store new hash, invalidating the old token
+    await this.authRepository.update(auth.id, {
+      refreshToken: this.hashToken(tokens.refreshToken),
+    });
 
     return tokens;
   }
@@ -153,8 +167,12 @@ export class AuthService {
 
     await this.passwordResetRepository.save(passwordReset);
 
-    // Send email with reset token
-    await this.emailService.sendPasswordResetEmail(auth.email, token);
+    // Dispatch to queue — handler returns immediately, SMTP happens async
+    await this.emailQueue.add(
+      EmailJobName.SEND_PASSWORD_RESET,
+      { email: auth.email, token },
+      { attempts: 3, backoff: { type: 'exponential', delay: 3_000 }, removeOnComplete: true },
+    );
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
@@ -232,8 +250,12 @@ export class AuthService {
 
     await this.emailVerificationRepository.save(emailVerification);
 
-    // Send email with verification code
-    await this.emailService.sendVerificationEmail(auth.email, code);
+    // Dispatch to queue — handler returns immediately, SMTP happens async
+    await this.emailQueue.add(
+      EmailJobName.SEND_VERIFICATION,
+      { email: auth.email, code },
+      { attempts: 3, backoff: { type: 'exponential', delay: 3_000 }, removeOnComplete: true },
+    );
   }
 
   async sendVerificationEmailByEmail(email: string): Promise<void> {
@@ -266,8 +288,12 @@ export class AuthService {
 
     await this.emailVerificationRepository.save(emailVerification);
 
-    // Send email with verification code
-    await this.emailService.sendVerificationEmail(auth.email, code);
+    // Dispatch to queue (sendVerificationEmailByEmail path)
+    await this.emailQueue.add(
+      EmailJobName.SEND_VERIFICATION,
+      { email: auth.email, code },
+      { attempts: 3, backoff: { type: 'exponential', delay: 3_000 }, removeOnComplete: true },
+    );
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<void> {
@@ -296,6 +322,16 @@ export class AuthService {
     });
 
     await this.emailVerificationRepository.update(emailVerification.id, { isUsed: true });
+
+    // Send welcome email asynchronously after successful verification
+    const user = emailVerification.user;
+    if (user?.email) {
+      await this.emailQueue.add(
+        EmailJobName.SEND_WELCOME,
+        { email: user.email, firstName: user.firstName },
+        { attempts: 2, backoff: { type: 'fixed', delay: 5_000 }, removeOnComplete: true },
+      );
+    }
   }
 
   private generateVerificationCode(): string {

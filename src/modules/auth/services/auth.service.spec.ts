@@ -53,6 +53,10 @@ describe('AuthService', () => {
             sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
           },
         },
+        {
+          provide: 'BullQueue_email',
+          useValue: { add: jest.fn().mockResolvedValue({ id: 'test-job' }) },
+        },
       ],
     }).compile();
 

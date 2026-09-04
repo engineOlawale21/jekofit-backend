@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Auth } from '../entities/auth.entity';
@@ -39,7 +40,7 @@ export class OAuthService {
     if (oauthAccount) {
       const auth = oauthAccount.user;
       const tokens = await this.generateTokens(auth);
-      await this.authRepository.update(auth.id, { refreshToken: tokens.refreshToken });
+      await this.authRepository.update(auth.id, { refreshToken: this.hashToken(tokens.refreshToken) });
       return { ...tokens, isNewUser: false };
     }
 
@@ -70,8 +71,12 @@ export class OAuthService {
     await this.oauthAccountRepository.save(oauthAccount);
 
     const tokens = await this.generateTokens(user);
-    await this.authRepository.update(user.id, { refreshToken: tokens.refreshToken });
+    await this.authRepository.update(user.id, { refreshToken: this.hashToken(tokens.refreshToken) });
     return { ...tokens, isNewUser: !existingAuth };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 
   private async generateTokens(auth: Auth): Promise<{ accessToken: string; refreshToken: string }> {

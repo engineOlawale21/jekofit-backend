@@ -17,5 +17,7 @@ module.exports = {
   testEnvironment: 'node',
   moduleNameMapper: {
     '^src/(.*)$': '<rootDir>/$1',
+    '^@nestjs/bull$': '<rootDir>/../test/mocks/nestjs-bull.ts',
+    '^@nestjs/schedule$': '<rootDir>/../test/mocks/nestjs-schedule.ts',
   },
 };

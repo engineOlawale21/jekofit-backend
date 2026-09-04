@@ -55,6 +55,15 @@ export class Auth {
   @Column({ nullable: true })
   gender: string;
 
+  @Column({ type: 'float', nullable: true })
+  weight: number;
+
+  @Column({ type: 'float', nullable: true })
+  height: number;
+
+  @Column({ type: 'int', nullable: true })
+  dailyGoal: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

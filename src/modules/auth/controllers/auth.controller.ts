@@ -1,6 +1,7 @@
-import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, HttpCode, HttpStatus, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '../services/auth.service';
 import { ProfileService } from '../services/profile.service';
 import { RegisterDto } from '../dto/register.dto';
@@ -10,7 +11,6 @@ import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { SendVerificationDto } from '../dto/send-verification.dto';
-import { AuthResponseDto } from '../dto/auth-response.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public } from '../decorators/public.decorator';
 
@@ -21,6 +21,39 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly profileService: ProfileService,
   ) {}
+
+  // ─── Cookie helpers ────────────────────────────────────────────────────────
+
+  private setCookies(res: Response, tokens: { accessToken: string; refreshToken: string }) {
+    const isProd = process.env.NODE_ENV === 'production';
+    const sameSite = (isProd ? 'strict' : 'lax') as 'strict' | 'lax';
+
+    // Access token — short-lived (15 min), accessible on all routes
+    res.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite,
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    // Refresh token — long-lived (30 days), scoped to refresh endpoint only
+    // This limits attack surface: the cookie is never sent to any other route
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite,
+      path: '/auth/refresh', // least-privilege: only sent to the refresh endpoint
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+  }
+
+  private clearCookies(res: Response) {
+    res.clearCookie('accessToken', { path: '/' });
+    res.clearCookie('refreshToken', { path: '/auth/refresh' });
+  }
+
+  // ─── Endpoints ─────────────────────────────────────────────────────────────
 
   @Public()
   @Post('register')
@@ -61,25 +94,30 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
-  @ApiResponse({ status: 200, description: 'User successfully logged in', type: AuthResponseDto })
+  @ApiResponse({ status: 200, description: 'User successfully logged in' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const tokens = await this.authService.login(loginDto);
-    return {
-      message: 'User successfully logged in',
-      ...tokens,
-    };
+    this.setCookies(res, tokens);
+    return { message: 'User successfully logged in' };
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access token' })
-  @ApiResponse({ status: 200, description: 'Token successfully refreshed', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  @ApiBody({ schema: { type: 'object', properties: { refreshToken: { type: 'string' } } } })
-  async refreshTokens(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshTokens(refreshToken);
+  @ApiOperation({ summary: 'Refresh access token using refreshToken cookie' })
+  @ApiResponse({ status: 200, description: 'Token successfully refreshed' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing refresh token' })
+  async refreshTokens(@Request() req, @Res({ passthrough: true }) res: Response) {
+    const refreshToken: string = req.cookies?.refreshToken;
+    if (!refreshToken) {
+      res.status(HttpStatus.UNAUTHORIZED);
+      return { message: 'No refresh token provided' };
+    }
+    const tokens = await this.authService.refreshTokens(refreshToken);
+    this.setCookies(res, tokens);
+    return { message: 'Token successfully refreshed' };
   }
 
   @Post('logout')
@@ -89,8 +127,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({ status: 204, description: 'User successfully logged out' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async logout(@Request() req) {
+  async logout(@Request() req, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(req.user.id);
+    this.clearCookies(res);
   }
 
   @Public()
