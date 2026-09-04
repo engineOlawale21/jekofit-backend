@@ -59,6 +59,7 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 
 - [x] Create expiring checkout sessions from an authenticated cart.
 - [x] Save contact, delivery address, shipping method, tax, and totals.
+- [x] Return checkout-specific delivery and pickup options with estimates.
 - [x] Initialize Paystack and validate signed webhooks.
 - [x] Expose payment/checkout status for the browser return screen.
 - [x] Create exactly one order for a successful payment through unique references.

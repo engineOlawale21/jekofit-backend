@@ -19,6 +19,9 @@ export class CheckoutController {
   @Get(':id')
   get(@CurrentUser() user: Auth, @Param('id') id: string) { return this.checkout.get(user.id, id); }
 
+  @Get(':id/shipping-options')
+  shippingOptions(@CurrentUser() user: Auth, @Param('id') id: string) { return this.checkout.shippingOptions(user.id, id); }
+
   @Patch(':id/details')
   @Throttle({ default: { limit: 10, ttl: 60 } })
   updateDetails(@CurrentUser() user: Auth, @Param('id') id: string, @Body() details: UpdateCheckoutDetailsDto) {

@@ -46,7 +46,7 @@ export class CheckoutService {
     if (details.country.toUpperCase() !== 'NG') throw new BadRequestException('Delivery is currently available in Nigeria only');
 
     const subtotal = Number(session.subtotal);
-    const shippingTotal = details.shippingMethod === 'home_delivery' ? 2500 : 0;
+    const shippingTotal = details.shippingMethod === 'home_delivery' ? this.homeDeliveryAmount(subtotal) : 0;
     const taxTotal = Math.round(subtotal * 0.075 * 100) / 100;
     session.contactEmail = details.contactEmail.toLowerCase();
     session.shippingAddress = {
@@ -60,4 +60,38 @@ export class CheckoutService {
     session.grandTotal = String(Math.round((subtotal + shippingTotal + taxTotal) * 100) / 100);
     return this.sessions.save(session);
   }
+
+  async shippingOptions(userId: string, id: string) {
+    const session = await this.get(userId, id);
+    if (session.status !== CheckoutSessionStatus.Open) throw new BadRequestException('Shipping options are unavailable for this checkout session');
+    const subtotal = Number(session.subtotal);
+    const now = new Date();
+    const date = (days: number) => {
+      const value = new Date(now);
+      value.setUTCDate(value.getUTCDate() + days);
+      return value.toISOString();
+    };
+    return {
+      checkoutSessionId: session.id,
+      currency: session.currency,
+      options: [
+        {
+          id: 'home_delivery',
+          name: 'Home delivery',
+          description: 'Tracked delivery to your shipping address',
+          amount: this.homeDeliveryAmount(subtotal),
+          estimatedArrival: { earliest: date(3), latest: date(5) },
+        },
+        {
+          id: 'store_pickup',
+          name: 'In-store pickup',
+          description: 'Collect from an available Jekofit pickup location',
+          amount: 0,
+          estimatedArrival: { earliest: date(1), latest: date(2) },
+        },
+      ],
+    };
+  }
+
+  private homeDeliveryAmount(subtotal: number) { return subtotal >= 100_000 ? 0 : 2_500; }
 }
