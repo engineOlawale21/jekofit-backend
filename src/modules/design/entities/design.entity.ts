@@ -10,7 +10,7 @@ export class Design {
   @Column({ length: 80 }) name: string;
   @Column({ length: 80, default: 'Jekofit T-Shirt' }) productName: string;
   @Column({ length: 32, default: '#ffffff' }) garmentColour: string;
-  @Column({ type: 'jsonb', default: {} }) canvas: Record<string, string>;
+  @Column({ type: 'jsonb', default: {} }) canvas: Record<string, unknown>;
   @Column({ type: 'int', default: 0 }) renderVersion: number;
   @Column({ length: 16, default: 'queued' }) renderStatus: string;
   @Column({ default: false }) isFavourite: boolean;

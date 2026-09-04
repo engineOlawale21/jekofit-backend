@@ -42,8 +42,9 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 - [x] Duplicate an existing design.
 - [x] Query asynchronous render status.
 - [x] Upload and process product assets.
-- [ ] Replace the loose canvas object with a versioned layer/surface document.
-- [ ] Persist preview/export URLs and design versions.
+- [x] Persist immutable design versions and allow version restore.
+- [ ] Validate the loose canvas object as a formal layer/surface document.
+- [ ] Persist preview/export URLs.
 - [ ] Add export generation and version restore.
 
 ### Cart

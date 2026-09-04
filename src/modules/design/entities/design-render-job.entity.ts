@@ -12,7 +12,7 @@ export class DesignRenderJob {
   @ManyToOne(() => Design, { onDelete: 'CASCADE' }) @JoinColumn({ name: 'designId' }) design: Design;
   @Column({ type: 'int' }) version: number;
   @Column({ type: 'enum', enum: DesignRenderJobStatus, default: DesignRenderJobStatus.Queued }) status: DesignRenderJobStatus;
-  @Column({ type: 'jsonb' }) canvasSnapshot: Record<string, string>;
+  @Column({ type: 'jsonb' }) canvasSnapshot: Record<string, unknown>;
   @Column({ type: 'text', nullable: true }) failureReason: string | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
