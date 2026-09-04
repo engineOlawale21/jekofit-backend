@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Auth } from '../../auth/entities/auth.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -18,4 +18,7 @@ export class OrderController {
 
   @Get(':orderNumber/confirmation')
   confirmation(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.getForUser(user.id, orderNumber); }
+
+  @Post(':orderNumber/reorder')
+  reorder(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.reorder(user.id, orderNumber); }
 }

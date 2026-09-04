@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProductVariant } from '../../catalog/entities/product-variant.entity';
 import { AddCartItemDto } from '../dto/add-cart-item.dto';
@@ -25,26 +25,15 @@ export class CartService {
 
   async add(userId: string, input: AddCartItemDto) {
     await this.dataSource.transaction(async (manager) => {
-      const variants = manager.getRepository(ProductVariant);
-      const carts = manager.getRepository(Cart);
-      const items = manager.getRepository(CartItem);
-      const designs = manager.getRepository(Design);
-      const variant = await variants.findOne({ where: { id: input.productVariantId, isActive: true }, lock: { mode: 'pessimistic_read' } });
-      if (!variant) throw new NotFoundException('Product variant not found');
-      if (variant.stockQuantity < input.quantity) throw new BadRequestException('Requested quantity is unavailable');
+      await this.addWithinTransaction(manager, userId, input);
+    });
+    return this.get(userId);
+  }
 
-      let cart = await carts.findOne({ where: { userId } });
-      if (!cart) cart = await carts.save(carts.create({ userId }));
-      const design = input.designId ? await designs.findOne({ where: { id: input.designId, userId } }) : null;
-      if (input.designId && !design) throw new NotFoundException('Design not found');
-      const existing = input.designId
-        ? await items.findOne({ where: { cartId: cart.id, productVariantId: variant.id, designId: input.designId } })
-        : await items.createQueryBuilder('item')
-          .where('item."cartId" = :cartId AND item."productVariantId" = :productVariantId AND item."designId" IS NULL', { cartId: cart.id, productVariantId: variant.id })
-          .getOne();
-      const quantity = (existing?.quantity ?? 0) + input.quantity;
-      if (quantity > 20 || quantity > variant.stockQuantity) throw new BadRequestException('Requested quantity is unavailable');
-      await items.save(existing ? { ...existing, quantity } : items.create({ cartId: cart.id, productVariantId: variant.id, quantity, designId: design?.id ?? null, designSnapshot: design ? { id: design.id, name: design.name, garmentColour: design.garmentColour, canvas: design.canvas } : null }));
+  async addMany(userId: string, inputs: AddCartItemDto[]) {
+    if (!inputs.length) throw new BadRequestException('No available items to add');
+    await this.dataSource.transaction(async (manager) => {
+      for (const input of inputs) await this.addWithinTransaction(manager, userId, input);
     });
     return this.get(userId);
   }
@@ -72,6 +61,38 @@ export class CartService {
       .execute();
     if (!result.affected) throw new NotFoundException('Cart item not found');
     return this.get(userId);
+  }
+
+  async clear(userId: string) {
+    await this.dataSource.createQueryBuilder()
+      .delete()
+      .from(CartItem)
+      .where('"cartId" IN (SELECT id FROM carts WHERE "userId" = :userId)', { userId })
+      .execute();
+    return this.get(userId);
+  }
+
+  private async addWithinTransaction(manager: EntityManager, userId: string, input: AddCartItemDto) {
+    const variants = manager.getRepository(ProductVariant);
+    const carts = manager.getRepository(Cart);
+    const items = manager.getRepository(CartItem);
+    const designs = manager.getRepository(Design);
+    const variant = await variants.findOne({ where: { id: input.productVariantId, isActive: true }, lock: { mode: 'pessimistic_read' } });
+    if (!variant) throw new NotFoundException('Product variant not found');
+    if (variant.stockQuantity < input.quantity) throw new BadRequestException('Requested quantity is unavailable');
+
+    let cart = await carts.findOne({ where: { userId } });
+    if (!cart) cart = await carts.save(carts.create({ userId }));
+    const design = input.designId ? await designs.findOne({ where: { id: input.designId, userId } }) : null;
+    if (input.designId && !design) throw new NotFoundException('Design not found');
+    const existing = input.designId
+      ? await items.findOne({ where: { cartId: cart.id, productVariantId: variant.id, designId: input.designId } })
+      : await items.createQueryBuilder('item')
+        .where('item."cartId" = :cartId AND item."productVariantId" = :productVariantId AND item."designId" IS NULL', { cartId: cart.id, productVariantId: variant.id })
+        .getOne();
+    const quantity = (existing?.quantity ?? 0) + input.quantity;
+    if (quantity > 20 || quantity > variant.stockQuantity) throw new BadRequestException('Requested quantity is unavailable');
+    await items.save(existing ? { ...existing, quantity } : items.create({ cartId: cart.id, productVariantId: variant.id, quantity, designId: design?.id ?? null, designSnapshot: design ? { id: design.id, name: design.name, garmentColour: design.garmentColour, canvas: design.canvas } : null }));
   }
 
   private toResponse(cart: Cart) {

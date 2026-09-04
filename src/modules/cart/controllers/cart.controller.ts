@@ -15,6 +15,9 @@ export class CartController {
   @Get()
   get(@CurrentUser() user: Auth) { return this.cart.get(user.id); }
 
+  @Delete()
+  clear(@CurrentUser() user: Auth) { return this.cart.clear(user.id); }
+
   @Post('items')
   @Throttle({ default: { limit: 30, ttl: 60 } })
   add(@CurrentUser() user: Auth, @Body() input: AddCartItemDto) { return this.cart.add(user.id, input); }

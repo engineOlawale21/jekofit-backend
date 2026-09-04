@@ -51,8 +51,9 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 - [x] Read cart; add, update, and remove standard or custom-design items.
 - [x] Recheck active variants, ownership, quantity, and stock.
 - [x] Preserve a design snapshot on the cart line.
+- [x] Clear the cart and atomically repopulate it from an owned previous order.
 - [ ] Guest carts and merge-on-login.
-- [ ] Move-to-favourites, clear-cart, and reorder commands.
+- [ ] Move-to-favourites command.
 - [ ] Stock reservation during checkout.
 
 ### Checkout and payment
