@@ -6,11 +6,13 @@ import { UserService } from './services/user.service';
 import { UserController } from './controllers/user.controller';
 import { AuthRepository } from './repositories/auth.repository';
 import { NewsletterPreferenceRepository } from './repositories/newsletter-preference.repository';
+import { DeliveryAddress } from './entities/delivery-address.entity';
+import { DeliveryAddressService } from './services/delivery-address.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Auth, NewsletterPreference])],
+  imports: [TypeOrmModule.forFeature([Auth, NewsletterPreference, DeliveryAddress])],
   controllers: [UserController],
-  providers: [UserService, AuthRepository, NewsletterPreferenceRepository],
+  providers: [UserService, DeliveryAddressService, AuthRepository, NewsletterPreferenceRepository],
   exports: [UserService, AuthRepository, NewsletterPreferenceRepository],
 })
 export class UserModule {}

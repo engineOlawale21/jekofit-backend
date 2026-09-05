@@ -19,7 +19,7 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 - [x] Read/update personal information.
 - [x] Change password and verify email.
 - [x] Read and update newsletter preferences.
-- [ ] Persist multiple saved delivery addresses.
+- [x] Persist multiple saved delivery addresses with a single default address.
 - [ ] Add a consent audit history.
 
 ### Catalogue and product details

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, HttpCode, HttpStatus, UseGuards, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from '../services/user.service';
 import { PersonalInfoDto, PersonalInfoRequestDto, UpdatePersonalInfoDto, PersonalInfoUpdateResponseDto } from '../dto/personal-info.dto';
@@ -10,13 +10,45 @@ import { EmailVerificationDto } from '../dto/email-verification.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Auth } from '../../auth/entities/auth.entity';
+import { CreateDeliveryAddressDto, UpdateDeliveryAddressDto } from '../dto/delivery-address.dto';
+import { DeliveryAddressService } from '../services/delivery-address.service';
 
 @ApiTags('User')
 @Controller('user')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService, private readonly deliveryAddresses: DeliveryAddressService) {}
+
+  @Get('delivery-addresses')
+  @ApiOperation({ summary: 'List saved delivery addresses' })
+  listDeliveryAddresses(@CurrentUser() user: Auth) {
+    return this.deliveryAddresses.list(user.id);
+  }
+
+  @Post('delivery-addresses')
+  @ApiOperation({ summary: 'Save a delivery address' })
+  createDeliveryAddress(@CurrentUser() user: Auth, @Body() dto: CreateDeliveryAddressDto) {
+    return this.deliveryAddresses.create(user.id, dto);
+  }
+
+  @Patch('delivery-addresses/:id')
+  @ApiOperation({ summary: 'Update an owned delivery address' })
+  updateDeliveryAddress(@CurrentUser() user: Auth, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDeliveryAddressDto) {
+    return this.deliveryAddresses.update(user.id, id, dto);
+  }
+
+  @Put('delivery-addresses/:id/default')
+  @ApiOperation({ summary: 'Set an owned delivery address as default' })
+  setDefaultDeliveryAddress(@CurrentUser() user: Auth, @Param('id', ParseUUIDPipe) id: string) {
+    return this.deliveryAddresses.setDefault(user.id, id);
+  }
+
+  @Delete('delivery-addresses/:id')
+  @ApiOperation({ summary: 'Delete an owned delivery address' })
+  removeDeliveryAddress(@CurrentUser() user: Auth, @Param('id', ParseUUIDPipe) id: string) {
+    return this.deliveryAddresses.remove(user.id, id);
+  }
 
   @Get('personal-info')
   @ApiOperation({ summary: 'Get the current user personal information' })
