@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Auth } from '../../auth/entities/auth.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ListOrdersDto } from '../dto/list-orders.dto';
 import { OrderService } from '../services/order.service';
+import { RequestCancellationDto } from '../dto/request-cancellation.dto';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
@@ -18,4 +19,12 @@ export class OrderController {
 
   @Get(':orderNumber/confirmation')
   confirmation(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.getForUser(user.id, orderNumber); }
+
+  @Get(':orderNumber/cancellation-policy')
+  cancellationPolicy(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.cancellationPolicy(user.id, orderNumber); }
+
+  @Post(':orderNumber/cancellation')
+  requestCancellation(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string, @Body() dto: RequestCancellationDto) {
+    return this.orders.requestCancellation(user.id, orderNumber, dto.reason);
+  }
 }
