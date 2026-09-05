@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional, UnauthorizedException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { PersonalInfoDto, UpdatePersonalInfoDto } from '../dto/personal-info.dto';
 import { LoginDetailsDto } from '../dto/login-details.dto';
@@ -8,12 +10,14 @@ import { UpdateNewsletterDto } from '../dto/update-newsletter.dto';
 import { EmailVerificationDto } from '../dto/email-verification.dto';
 import { AuthRepository } from '../repositories/auth.repository';
 import { NewsletterPreferenceRepository } from '../repositories/newsletter-preference.repository';
+import { ConsentAudit, ConsentType } from '../entities/consent-audit.entity';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly newsletterRepository: NewsletterPreferenceRepository,
+    @Optional() @InjectRepository(ConsentAudit) private readonly consentAudits?: Repository<ConsentAudit>,
   ) {}
 
   async getPersonalInfo(userId: string): Promise<PersonalInfoDto> {
@@ -261,6 +265,9 @@ export class UserService {
       });
     }
 
+    const previousSubscription = preference.isSubscribed;
+    const previousMarketingConsent = preference.marketingConsent;
+
     if (isSubscribed !== undefined) {
       if (isSubscribed && !preference.isSubscribed) {
         preference.isSubscribed = true;
@@ -285,6 +292,17 @@ export class UserService {
 
     const updatedPreference = await this.newsletterRepository.save(preference);
 
+    const auditEntries: Array<Partial<ConsentAudit>> = [];
+    if (isSubscribed !== undefined && isSubscribed !== previousSubscription) {
+      auditEntries.push({ userId, type: ConsentType.Newsletter, granted: isSubscribed, source: 'account_settings' });
+    }
+    if (marketingConsent !== undefined && marketingConsent !== previousMarketingConsent) {
+      auditEntries.push({ userId, type: ConsentType.Marketing, granted: marketingConsent, source: 'account_settings' });
+    }
+    if (this.consentAudits && auditEntries.length > 0) {
+      await this.consentAudits.save(this.consentAudits.create(auditEntries));
+    }
+
     return {
       userId: updatedPreference.userId,
       isSubscribed: updatedPreference.isSubscribed,
@@ -292,6 +310,12 @@ export class UserService {
       subscribedAt: updatedPreference.subscribedAt,
       consentGivenAt: updatedPreference.consentGivenAt,
     };
+  }
+
+  async getConsentHistory(userId: string): Promise<ConsentAudit[]> {
+    await this.ensureUserExists(userId);
+    if (!this.consentAudits) return [];
+    return this.consentAudits.find({ where: { userId }, order: { createdAt: 'DESC' }, take: 100 });
   }
 
   private async ensureUserExists(userId: string): Promise<void> {

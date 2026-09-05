@@ -78,6 +78,12 @@ export class UserController {
     return this.userService.updateNewsletter(user.id, updateNewsletterDto);
   }
 
+  @Get('consent-history')
+  @ApiOperation({ summary: 'Get the current user consent audit history' })
+  getConsentHistory(@CurrentUser() user: Auth) {
+    return this.userService.getConsentHistory(user.id);
+  }
+
   @Post('newsletter/subscribe')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Subscribe to newsletter' })
