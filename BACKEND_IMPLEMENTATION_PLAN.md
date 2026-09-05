@@ -78,7 +78,8 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 
 - [x] Submit a support ticket.
 - [x] Read/search the FAQ content required by the support screen.
-- [ ] Human-readable ticket numbers, authenticated ticket history, replies, and attachments.
+- [x] Human-readable ticket numbers, authenticated ticket history, and customer replies.
+- [ ] Ticket attachments and agent-management endpoints.
 - [ ] Persisted chat sessions/messages and a WebSocket gateway.
 
 ## Delivery phases
