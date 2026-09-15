@@ -32,4 +32,8 @@ export class CheckoutController {
   @Get(':id/payment-status')
   paymentStatus(@CurrentUser() user: Auth, @Param('id') id: string) { return this.payment.getStatus(user.id, id); }
 
+  @Post(':id/payment/verify')
+  @Throttle({ default: { limit: 10, ttl: 60 } })
+  verifyPayment(@CurrentUser() user: Auth, @Param('id') id: string) { return this.payment.verify(user.id, id); }
+
 }
