@@ -13,9 +13,10 @@ import { Cart } from '../cart/entities/cart.entity';
 import { CartItem } from '../cart/entities/cart-item.entity';
 import { ProductionJob } from '../order/entities/production-job.entity';
 import { ProductionModule } from '../order/production.module';
+import { PaymentEvent } from './entities/payment-event.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CheckoutSession, Payment, Order, OrderItem, Cart, CartItem, ProductionJob]), CartModule, ProductionModule],
+  imports: [TypeOrmModule.forFeature([CheckoutSession, Payment, PaymentEvent, Order, OrderItem, Cart, CartItem, ProductionJob]), CartModule, ProductionModule],
   controllers: [CheckoutController, PaymentWebhookController],
   providers: [CheckoutService, PaymentService],
 })
