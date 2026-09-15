@@ -20,11 +20,6 @@ export class OrderController {
   @Get(':orderNumber/confirmation')
   confirmation(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.getForUser(user.id, orderNumber); }
 
-  @Get(':orderNumber/cancellation-policy')
-  cancellationPolicy(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.cancellationPolicy(user.id, orderNumber); }
-
-  @Post(':orderNumber/cancellation')
-  requestCancellation(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string, @Body() dto: RequestCancellationDto) {
-    return this.orders.requestCancellation(user.id, orderNumber, dto.reason);
-  }
+  @Get(':orderNumber/tracking')
+  tracking(@CurrentUser() user: Auth, @Param('orderNumber') orderNumber: string) { return this.orders.trackingForUser(user.id, orderNumber); }
 }

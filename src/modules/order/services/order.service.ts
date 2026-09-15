@@ -2,14 +2,14 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ListOrdersDto } from '../dto/list-orders.dto';
-import { Order, OrderStatus } from '../entities/order.entity';
-import { OrderCancellation } from '../entities/order-cancellation.entity';
+import { Order } from '../entities/order.entity';
+import { OrderTrackingEvent } from '../entities/order-tracking-event.entity';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectRepository(Order) private readonly orders: Repository<Order>,
-    @InjectRepository(OrderCancellation) private readonly cancellations: Repository<OrderCancellation>,
+    @InjectRepository(OrderTrackingEvent) private readonly trackingEvents: Repository<OrderTrackingEvent>,
   ) {}
 
   async listForUser(userId: string, query: ListOrdersDto) {
@@ -28,29 +28,8 @@ export class OrderService {
     return order;
   }
 
-  async cancellationPolicy(userId: string, orderNumber: string) {
+  async trackingForUser(userId: string, orderNumber: string) {
     const order = await this.getForUser(userId, orderNumber);
-    const deadline = new Date(order.createdAt.getTime() + 30 * 60 * 1000);
-    const existingRequest = await this.cancellations.findOne({ where: { orderId: order.id } });
-    const eligible = order.status === OrderStatus.Paid && Date.now() <= deadline.getTime() && !existingRequest;
-    return { eligible, deadline, existingRequest, reason: eligible ? null : this.ineligibilityReason(order, deadline, existingRequest) };
-  }
-
-  async requestCancellation(userId: string, orderNumber: string, reason: string) {
-    const order = await this.getForUser(userId, orderNumber);
-    const existing = await this.cancellations.findOne({ where: { orderId: order.id } });
-    if (existing) throw new ConflictException('A cancellation request already exists');
-    const deadline = new Date(order.createdAt.getTime() + 30 * 60 * 1000);
-    if (order.status !== OrderStatus.Paid || Date.now() > deadline.getTime()) {
-      throw new UnprocessableEntityException(this.ineligibilityReason(order, deadline, null));
-    }
-    return this.cancellations.save(this.cancellations.create({ orderId: order.id, reason: reason.trim() }));
-  }
-
-  private ineligibilityReason(order: Order, deadline: Date, existing: OrderCancellation | null) {
-    if (existing) return 'A cancellation request already exists';
-    if (order.status !== OrderStatus.Paid) return `Orders with status ${order.status} cannot be cancelled`;
-    if (Date.now() > deadline.getTime()) return 'The 30-minute cancellation window has expired';
-    return 'This order is not eligible for cancellation';
+    return this.trackingEvents.find({ where: { orderId: order.id }, order: { occurredAt: 'ASC' } });
   }
 }
