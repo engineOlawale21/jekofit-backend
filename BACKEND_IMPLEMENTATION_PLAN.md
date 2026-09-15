@@ -71,7 +71,8 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 
 - [x] List a user's orders and retrieve an owned order by number.
 - [x] Return confirmation details after payment.
-- [ ] Cursor/status pagination, reorder, cancellation policy, and tracking events.
+- [ ] Cursor/status pagination, reorder, and tracking events.
+- [x] Owned cancellation eligibility and cancellation requests.
 - [ ] Asynchronous PDF receipt generation/download.
 
 ### Customer support
