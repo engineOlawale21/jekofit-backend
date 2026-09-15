@@ -3,14 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ListOrdersDto } from '../dto/list-orders.dto';
 import { Order } from '../entities/order.entity';
-import { OrderTrackingEvent } from '../entities/order-tracking-event.entity';
+import { CartService } from '../../cart/services/cart.service';
 
 @Injectable()
 export class OrderService {
-  constructor(
-    @InjectRepository(Order) private readonly orders: Repository<Order>,
-    @InjectRepository(OrderTrackingEvent) private readonly trackingEvents: Repository<OrderTrackingEvent>,
-  ) {}
+  constructor(@InjectRepository(Order) private readonly orders: Repository<Order>, private readonly cart: CartService) {}
 
   async listForUser(userId: string, query: ListOrdersDto) {
     const [items, total] = await this.orders.findAndCount({
@@ -28,8 +25,12 @@ export class OrderService {
     return order;
   }
 
-  async trackingForUser(userId: string, orderNumber: string) {
+  async reorder(userId: string, orderNumber: string) {
     const order = await this.getForUser(userId, orderNumber);
-    return this.trackingEvents.find({ where: { orderId: order.id }, order: { occurredAt: 'ASC' } });
+    const items = order.items
+      .filter((item) => item.productVariantId && !item.designSnapshot)
+      .map((item) => ({ productVariantId: item.productVariantId!, quantity: item.quantity }));
+    const cart = items.length ? await this.cart.addMany(userId, items) : await this.cart.get(userId);
+    return { sourceOrderNumber: order.orderNumber, cart, skippedCustomItems: order.items.length - items.length };
   }
 }
