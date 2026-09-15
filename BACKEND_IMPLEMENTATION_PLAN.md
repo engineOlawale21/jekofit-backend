@@ -65,14 +65,15 @@ This document is the backend source of truth for the supplied Jekofit screens. I
 - [x] Create exactly one order for a successful payment through unique references.
 - [ ] Guest checkout.
 - [ ] Configurable delivery zones, pickup locations, discounts, and tax rules.
-- [ ] Explicit provider verification fallback and payment-event ledger.
+- [x] Explicit Paystack verification fallback and sanitized payment-event ledger.
 - [ ] Idempotency-key records for checkout/payment commands.
 
 ### Orders and confirmation
 
 - [x] List a user's orders and retrieve an owned order by number.
 - [x] Return confirmation details after payment.
-- [ ] Cursor/status pagination, reorder, cancellation policy, and tracking events.
+- [ ] Cursor/status pagination, reorder, and cancellation policy.
+- [x] Owned order tracking event history.
 - [ ] Asynchronous PDF receipt generation/download.
 
 ### Customer support

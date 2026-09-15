@@ -4,6 +4,7 @@ import { Auth } from '../../auth/entities/auth.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ListOrdersDto } from '../dto/list-orders.dto';
 import { OrderService } from '../services/order.service';
+import { RequestCancellationDto } from '../dto/request-cancellation.dto';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
